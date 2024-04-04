@@ -169,17 +169,21 @@ def Q_1(cursor, conn, execution_time):
     # Enter QUERY within the quotes:
 
     query = """ 
-        SELECT p.name, AVG(e.statsbomb_xg) as average_xg
-        FROM players p
-        JOIN events e ON p.player_id = e.player_id
+        SELECT 
+            p.name AS player_name,
+            AVG((e.shot_data->>'statsbomb_xg')::float) AS average_xg
+        FROM events e
+        JOIN players p ON e.player_id = p.player_id
         JOIN matches m ON e.match_id = m.match_id
-        JOIN competitions c ON m.competition_id = c.competition_id
-        WHERE c.competition_name = 'La Liga' AND c.season_name = '2020/2021'
-        AND e.type_id = (SELECT type_id FROM event_types WHERE name = 'Shot')
-        AND e.statsbomb_xg > 0
+        JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+        WHERE 
+            c.competition_name = 'La Liga' AND 
+            c.season_name = '2020/2021' AND 
+            e.type_id = (SELECT type_id FROM event_types WHERE name = 'Shot') AND
+            e.shot_data->>'statsbomb_xg' IS NOT NULL
         GROUP BY p.name
         HAVING COUNT(e.event_id) > 0
-        ORDER BY average_xg DESC
+        ORDER BY average_xg DESC;
     """
 
     #==========================================================================
@@ -199,17 +203,21 @@ def Q_2(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
 
-    query = """ 
-        SELECT p.name, COUNT(e.event_id) as num_shots
-        FROM players p
-        JOIN events e ON p.player_id = e.player_id
+    query = """
+        SELECT 
+            p.name AS player_name,
+            COUNT(e.event_id) AS number_of_shots
+        FROM events e
+        JOIN players p ON e.player_id = p.player_id
         JOIN matches m ON e.match_id = m.match_id
-        JOIN competitions c ON m.competition_id = c.competition_id
-        WHERE c.competition_name = 'La Liga' AND c.season_name = '2020/2021'
-        AND e.type_id = (SELECT type_id FROM event_types WHERE name = 'Shot')
+        JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+        WHERE 
+            c.competition_name = 'La Liga' AND 
+            c.season_name = '2020/2021' AND 
+            e.type_id = (SELECT type_id FROM event_types WHERE name = 'Shot')
         GROUP BY p.name
-        HAVING COUNT(e.event_id) >= 1
-        ORDER BY num_shots DESC
+        HAVING COUNT(e.event_id) > 0
+        ORDER BY number_of_shots DESC;
     """
 
     #==========================================================================
@@ -229,7 +237,23 @@ def Q_3(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """ 
+        SELECT 
+            p.name AS player_name,
+        COUNT(e.event_id) AS number_of_first_time_shots
+        FROM events e
+        JOIN players p ON e.player_id = p.player_id
+        JOIN matches m ON e.match_id = m.match_id
+        JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+        WHERE 
+            c.competition_name = 'La Liga' AND 
+            c.season_name IN ('2020/2021', '2019/2020', '2018/2019') AND 
+            e.type_id = (SELECT type_id FROM event_types WHERE name = 'Shot') AND
+            (e.shot_data->>'first_time')::boolean IS TRUE
+        GROUP BY p.name
+        HAVING COUNT(e.event_id) > 0
+        ORDER BY number_of_first_time_shots DESC;
+    """
 
     #==========================================================================
 
