@@ -167,7 +167,6 @@ def load_all_events_data(db_params):
             with open(file_path, 'r') as file:
                 events_data = json.load(file)
                 load_events_data(match_id[0], events_data, cursor)
-
     # Commit changes and close the connection
     conn.commit()
     cursor.close()
@@ -180,12 +179,13 @@ def load_events_data(match_id, events_data, cursor):
     shot_type_id = cursor.fetchone()[0]
 
     for event in events_data:
-        # Insert or ignore into players, teams, positions, event_types
+        # Extract the player_id and insert or ignore into players
         player_id = event.get('player', {}).get('id')
         if player_id:
             cursor.execute("INSERT INTO players (player_id, name) VALUES (%s, %s) ON CONFLICT (player_id) DO NOTHING;",
                            (player_id, event['player'].get('name')))
 
+        # Extract the team_id and insert or ignore into teams
         team_id = event.get('team', {}).get('id')
         if team_id:
             cursor.execute("INSERT INTO teams (team_id, name) VALUES (%s, %s) ON CONFLICT (team_id) DO NOTHING;",
@@ -199,23 +199,44 @@ def load_events_data(match_id, events_data, cursor):
             if cursor.fetchone()[0]:
                 valid_position_id = position_id
 
-        # Insert or ignore into event_types
+        # Extract the type_id and insert or ignore into event_types
         type_id = event['type']['id']
         cursor.execute("INSERT INTO event_types (type_id, name) VALUES (%s, %s) ON CONFLICT (type_id) DO NOTHING;",
                        (type_id, event['type'].get('name')))
 
-        # Check if the event is a 'Shot' and has a statsbomb_xg value
-        statsbomb_xg = event['shot'].get('statsbomb_xg') if 'shot' in event and event['type']['id'] == shot_type_id else None
+        # Prepare shot_data if this event is a 'Shot'
+        shot_data = json.dumps(event['shot']) if 'shot' in event and event['type']['id'] == shot_type_id else None
 
-        cursor.execute("""
-            INSERT INTO events (event_id, match_id, period, timestamp, minute, second, possession, type_id, player_id, position_id, team_id, location, related_events, statsbomb_xg)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (event_id) DO NOTHING;
-        """, (
-            event['id'], match_id, event['period'], event['timestamp'], event['minute'], event['second'],
-            event['possession'], type_id, player_id, valid_position_id, team_id, 
-            json.dumps(event.get('location')), json.dumps(event.get('related_events')), statsbomb_xg
-        ))
+        # Check if event already exists
+        cursor.execute("SELECT EXISTS(SELECT 1 FROM events WHERE event_id = %s)", (event['id'],))
+        event_exists = cursor.fetchone()[0]
+
+        if event_exists:
+            # Update the existing event with shot_data
+            try:
+                cursor.execute("""
+                    UPDATE events
+                    SET shot_data = %s
+                    WHERE event_id = %s;
+                """, (shot_data, event['id']))
+                print(f"Updated event {event['id']} with shot_data.")
+            except Exception as e:
+                print(f"Error updating event {event['id']}: {e}")
+        else:
+            # Insert new event
+            try:
+                cursor.execute("""
+                    INSERT INTO events (event_id, match_id, period, timestamp, minute, second, possession, type_id, player_id, position_id, team_id, location, related_events, shot_data)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (
+                    event['id'], match_id, event['period'], event['timestamp'], event['minute'], event['second'],
+                    event['possession'], type_id, player_id, valid_position_id, team_id, 
+                    json.dumps(event.get('location')), json.dumps(event.get('related_events')), shot_data
+                ))
+                print(f"Inserted new event {event['id']}.")
+            except Exception as e:
+                print(f"Error inserting event {event['id']}: {e}")
+
 
 
 # get ids & json data for lineups
@@ -288,5 +309,5 @@ db_parameters = {
 # USAGE
 #load_competitions_to_db('data/competitions.json', db_parameters)
 #load_all_match_data(db_parameters)
-load_all_events_data(db_parameters)
+#load_all_events_data(db_parameters)
 # load_all_lineups_data(db_parameters)
