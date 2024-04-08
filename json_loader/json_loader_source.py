@@ -174,68 +174,48 @@ def load_all_events_data(db_params):
 
 # Insert data into the events and related tables
 def load_events_data(match_id, events_data, cursor):
-    # Retrieve the type_id for 'Shot' events
-    cursor.execute("SELECT type_id FROM event_types WHERE name = 'Shot'")
-    shot_type_id = cursor.fetchone()[0]
-
     for event in events_data:
-        # Extract the player_id and insert or ignore into players
-        player_id = event.get('player', {}).get('id')
-        if player_id:
-            cursor.execute("INSERT INTO players (player_id, name) VALUES (%s, %s) ON CONFLICT (player_id) DO NOTHING;",
-                           (player_id, event['player'].get('name')))
-
-        # Extract the team_id and insert or ignore into teams
-        team_id = event.get('team', {}).get('id')
-        if team_id:
-            cursor.execute("INSERT INTO teams (team_id, name) VALUES (%s, %s) ON CONFLICT (team_id) DO NOTHING;",
-                           (team_id, event['team'].get('name')))
-
-        # Check if position_id exists and is valid
-        position_id = event.get('position', {}).get('id')
-        valid_position_id = None
-        if position_id:
-            cursor.execute("SELECT EXISTS(SELECT 1 FROM positions WHERE position_id = %s)", (position_id,))
-            if cursor.fetchone()[0]:
-                valid_position_id = position_id
-
-        # Extract the type_id and insert or ignore into event_types
+        # Extract and insert or ignore event_type
         type_id = event['type']['id']
-        cursor.execute("INSERT INTO event_types (type_id, name) VALUES (%s, %s) ON CONFLICT (type_id) DO NOTHING;",
-                       (type_id, event['type'].get('name')))
+        type_name = event['type']['name']
+        cursor.execute("INSERT INTO event_types (type_id, name) VALUES (%s, %s) ON CONFLICT (type_id) DO NOTHING;", (type_id, type_name))
 
-        # Prepare shot_data if this event is a 'Shot'
-        shot_data = json.dumps(event['shot']) if 'shot' in event and event['type']['id'] == shot_type_id else None
+        # Extract event details
+        event_type_key = type_name.lower().replace(" ", "_")  # Transforming type name into a key format
+        event_details = event.get(event_type_key)  # Get details if they exist for this type
+        event_details_json = json.dumps(event_details) if event_details else None
 
         # Check if event already exists
         cursor.execute("SELECT EXISTS(SELECT 1 FROM events WHERE event_id = %s)", (event['id'],))
         event_exists = cursor.fetchone()[0]
 
         if event_exists:
-            # Update the existing event with shot_data
-            try:
-                cursor.execute("""
-                    UPDATE events
-                    SET shot_data = %s
-                    WHERE event_id = %s;
-                """, (shot_data, event['id']))
-                print(f"Updated event {event['id']} with shot_data.")
-            except Exception as e:
-                print(f"Error updating event {event['id']}: {e}")
+            # Update existing event
+            cursor.execute("""
+                UPDATE events
+                SET match_id = %s, period = %s, timestamp = %s, minute = %s, second = %s, 
+                    possession = %s, type_id = %s, player_id = %s, team_id = %s, 
+                    location = %s, related_events = %s, event_details = %s
+                WHERE event_id = %s;
+            """, (
+                match_id, event['period'], event['timestamp'], event['minute'], event['second'],
+                event['possession'], type_id, event.get('player', {}).get('id'), 
+                event.get('team', {}).get('id'), json.dumps(event.get('location')), 
+                json.dumps(event.get('related_events')), event_details_json, event['id']
+            ))
         else:
             # Insert new event
-            try:
-                cursor.execute("""
-                    INSERT INTO events (event_id, match_id, period, timestamp, minute, second, possession, type_id, player_id, position_id, team_id, location, related_events, shot_data)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (
-                    event['id'], match_id, event['period'], event['timestamp'], event['minute'], event['second'],
-                    event['possession'], type_id, player_id, valid_position_id, team_id, 
-                    json.dumps(event.get('location')), json.dumps(event.get('related_events')), shot_data
-                ))
-                print(f"Inserted new event {event['id']}.")
-            except Exception as e:
-                print(f"Error inserting event {event['id']}: {e}")
+            cursor.execute("""
+                INSERT INTO events (event_id, match_id, period, timestamp, minute, second, possession, type_id, player_id, team_id, location, related_events, event_details)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, (
+                event['id'], match_id, event['period'], event['timestamp'], event['minute'], event['second'],
+                event['possession'], type_id, event.get('player', {}).get('id'), 
+                event.get('team', {}).get('id'), json.dumps(event.get('location')), 
+                json.dumps(event.get('related_events')), event_details_json
+            ))
+
+
 
 
 
