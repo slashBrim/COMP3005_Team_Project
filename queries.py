@@ -345,7 +345,22 @@ def Q_6(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """ 
+        select t.name As team_name , count(e.event_id) As shots
+        from events e
+        join teams t on e.team_id = t.team_id
+        join matches m on e.match_id = m.match_id 
+        join competitions c on m.competition_id = c.competition_id 
+        WHERE 
+            c.competition_name = 'Premier League' AND
+            c.season_name = '2003/2004' AND
+            e.type_id = 16
+
+        group by t.name
+        having count(e.event_id) > 0
+        order by shots desc
+        ;
+    """
 
     #==========================================================================
 
