@@ -378,7 +378,21 @@ def Q_7(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """ 
+    select p.name as player_name, count(*) as through_balls 
+    from events e
+    join players p on (e.event_details->'player'->>'id')::integer = e.player_id
+    join matches m ON e.match_id = m.match_id
+    join event_types et ON e.type_id = et.type_id
+    where 
+        (e.event_details->>'through_ball')::boolean and 
+        m.competition_id = (select competition_id from competitions where competition_name = 'La Liga' and season_name = '2020/2021') and 
+        et.type_id = 30
+
+    group by p.name
+    having count(*) >0
+    order by through_balls desc
+    """
 
     #==========================================================================
 
