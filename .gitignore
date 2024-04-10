@@ -1,1 +1,11 @@
 script
+#!/bin/bash
+
+
+cat script >> .gitignore
+git add .
+git commit -m "added query 7"
+
+git push origin main
+git rm --cached .gitignore
+git commit -m "added query 7"
