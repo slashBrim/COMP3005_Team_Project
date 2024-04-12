@@ -451,6 +451,7 @@ def Q_9(cursor, conn, execution_time):
     join competitions c on c.competition_name='La Liga' and m.competition_id = c.competition_id
     where 
         (e.event_details->'outcome'->>'id')::integer =8 is not null and 
+        (c.season_name = '2020/2021' or c.season_name = '2019/2020' or c.season_name = '2018/2019') and
         et.type_id =14
     group by p.name
     having count(*) >0
