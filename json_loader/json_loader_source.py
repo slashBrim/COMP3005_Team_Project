@@ -202,7 +202,7 @@ def load_events_data(match_id, events_data, cursor):
                 event['possession'], type_id, event.get('player', {}).get('id'), 
                 event.get('team', {}).get('id'), json.dumps(event.get('location')), 
                 json.dumps(event.get('related_events')), event_details_json, event['id']
-            ))
+            ))     
         else:
             # Insert new event
             cursor.execute("""
@@ -213,8 +213,7 @@ def load_events_data(match_id, events_data, cursor):
                 event['possession'], type_id, event.get('player', {}).get('id'), 
                 event.get('team', {}).get('id'), json.dumps(event.get('location')), 
                 json.dumps(event.get('related_events')), event_details_json
-            ))
-
+            ))    
 
 
 
