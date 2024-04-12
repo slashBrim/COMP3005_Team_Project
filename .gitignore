@@ -27,3 +27,12 @@ git commit -m "added query 7"
 
 git push origin main
 
+#!/bin/bash
+
+
+cat script >> .gitignore
+git add .
+git commit -m "changed query 7 added query 8,9,10"
+
+git push origin main
+

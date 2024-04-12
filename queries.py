@@ -442,7 +442,20 @@ def Q_9(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """ 
+    select p.name, count(*) as succesful_dribbles 
+    from events e
+    join players p on p.player_id = e.player_id
+    join matches m ON e.match_id = m.match_id
+    join event_types et ON e.type_id = et.type_id
+    join competitions c on c.competition_name='La Liga' and m.competition_id = c.competition_id
+    where 
+        (e.event_details->'outcome'->>'id')::integer =8 is not null and 
+        et.type_id =14
+    group by p.name
+    having count(*) >0
+    order by succesful_dribbles desc
+    """
 
     #==========================================================================
 
@@ -460,7 +473,21 @@ def Q_10(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """ 
+    select p.name as player_name, count(*)as dribble_past
+    from events e
+    join players p on e.player_id= p.player_id
+    join matches m ON e.match_id = m.match_id
+    where 
+        e.type_id=39 and 
+        m.competition_id = 11 and
+        m.season_id = 90  
+        
+
+    group by p.name
+    having count(*) >0
+    order by dribble_past desc
+    """
 
     #==========================================================================
 
