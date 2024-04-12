@@ -107,7 +107,7 @@ competitions = [
 db_parameters = {
     'dbname': 'project_database',
     'user': 'postgres',
-    'password': 'pejmyv-1zovfy-fuSxid',
+    'password': '1234',
     'host': 'localhost'
 }
 # download_matches_data(competitions, base_url)
