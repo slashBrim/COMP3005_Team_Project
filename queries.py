@@ -383,11 +383,11 @@ def Q_7(cursor, conn, execution_time):
     from events e
     join players p on e.player_id= p.player_id
     join matches m ON e.match_id = m.match_id
-    join event_types et ON e.type_id = et.type_id
     where 
         (e.event_details->>'through_ball')::boolean is not null and 
-        m.competition_id = (select competition_id from competitions where competition_name = 'La Liga' and season_name = '2020/2021') and 
-        et.type_id = 30
+        m.competition_id = 11 and 
+		m.season_id = 90 and 
+        e.type_id = 30
 
     group by p.name
     having count(*) >0
@@ -415,11 +415,11 @@ def Q_8(cursor, conn, execution_time):
     from events e
     join teams t on e.team_id= t.team_id
     join matches m ON e.match_id = m.match_id
-    join event_types et ON e.type_id = et.type_id
     where 
         (e.event_details->>'through_ball')::boolean is not null and 
-        m.competition_id = (select competition_id from competitions where competition_name = 'La Liga' and season_name = '2020/2021') and 
-        et.type_id = 30
+        m.competition_id = 11 and 
+		m.season_id = 90 and 
+        e.type_id = 30
 
     group by t.name
     having count(*) >0
@@ -447,12 +447,10 @@ def Q_9(cursor, conn, execution_time):
     from events e
     join players p on p.player_id = e.player_id
     join matches m ON e.match_id = m.match_id
-    join event_types et ON e.type_id = et.type_id
     join competitions c on c.competition_name='La Liga' and m.competition_id = c.competition_id
     where 
         (e.event_details->'outcome'->>'id')::integer =8 is not null and 
-        (c.season_name = '2020/2021' or c.season_name = '2019/2020' or c.season_name = '2018/2019') and
-        et.type_id =14
+        e.type_id =14
     group by p.name
     having count(*) >0
     order by succesful_dribbles desc
